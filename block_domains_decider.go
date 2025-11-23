@@ -10,7 +10,7 @@ import (
 // become a blocker. The purpose of each of the functions is described below.
 type BlockDomainsDecider interface {
 	IsDomainBlocked(domain string) bool
-	StartBlocklistUpdater(ticker *time.Ticker)
+	StartBlocklistUpdater(ticker *time.Ticker, stopChan chan struct{})
 	UpdateBlocklist() error
 }
 
@@ -44,11 +44,13 @@ func PrepareBlocklist(filePath string, blocklistUpdateFrequency string, blocklis
 
 	// Setup periodic updation of the blocklist
 	ticker := time.NewTicker(frequency)
-	decider.StartBlocklistUpdater(ticker)
+	stopChan := make(chan struct{})
+	decider.StartBlocklistUpdater(ticker, stopChan)
 
 	stopTicker := func() error {
 		fmt.Println("[INFO] Ticker was stopped.")
 		ticker.Stop()
+		close(stopChan)
 		return nil
 	}
 

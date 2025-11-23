@@ -54,17 +54,21 @@ func (d *BlockDomainsDeciderABP) IsDomainBlocked(domain string) bool {
 }
 
 // StartBlocklistUpdater ...
-func (d *BlockDomainsDeciderABP) StartBlocklistUpdater(ticker *time.Ticker) {
+func (d *BlockDomainsDeciderABP) StartBlocklistUpdater(ticker *time.Ticker, stopChan chan struct{}) {
 	go func() {
 		for {
-			tick := <-ticker.C
-			d.log.Debugf("Ticker arrived at time: %v", tick)
+			select {
+			case tick := <-ticker.C:
+				d.log.Debugf("Ticker arrived at time: %v", tick)
 
-			if d.IsBlocklistUpdateRequired() {
-				d.log.Debug("update required")
-				d.UpdateBlocklist()
-			} else {
-				d.log.Debug("update not required")
+				if d.IsBlocklistUpdateRequired() {
+					d.log.Debug("update required")
+					d.UpdateBlocklist()
+				} else {
+					d.log.Debug("update not required")
+				}
+			case <-stopChan:
+				return
 			}
 		}
 	}()
